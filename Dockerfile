@@ -2,20 +2,22 @@ FROM frappe/erpnext:v16.13.1
 
 USER frappe
 
-WORKDIR /home/frappe/frappe-bench
+WORKDIR /home/frappe/frappe-bench/apps
 
-# Clone apps separately to reduce memory per step
-RUN bench get-app https://github.com/erpchampions/uganda_compliance --branch version-15
+# Clone apps with git directly (skips auto pip install)
+RUN git clone https://github.com/erpchampions/uganda_compliance --branch version-15 --depth 1
 
-RUN bench get-app https://github.com/DeliveryDevs-ERP/Cargo-Management --branch main
+RUN git clone https://github.com/DeliveryDevs-ERP/Cargo-Management --branch main --depth 1
 
-# Fix uganda_compliance dependencies
-RUN sed -i 's/pillow==10.2.0/Pillow>=10.3.0/' apps/uganda_compliance/pyproject.toml && \
-    sed -i 's/numpy==2.2.4/numpy>=1.26.0/' apps/uganda_compliance/pyproject.toml
+# Fix uganda_compliance dependencies before installing
+RUN sed -i 's/pillow==10.2.0/Pillow>=10.3.0/' uganda_compliance/pyproject.toml && \
+    sed -i 's/numpy==2.2.4/numpy>=1.26.0/' uganda_compliance/pyproject.toml
 
 # Fix cargo_management hooks
-RUN sed -i 's/^before_install/#before_install/' apps/cargo_management/cargo_management/hooks.py && \
-    sed -i 's/^after_install/#after_install/' apps/cargo_management/cargo_management/hooks.py
+RUN sed -i 's/^before_install/#before_install/' cargo_management/cargo_management/hooks.py && \
+    sed -i 's/^after_install/#after_install/' cargo_management/cargo_management/hooks.py
+
+WORKDIR /home/frappe/frappe-bench
 
 # Install apps
 RUN /home/frappe/frappe-bench/env/bin/pip install -e apps/uganda_compliance
